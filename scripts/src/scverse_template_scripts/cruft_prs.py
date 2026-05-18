@@ -5,20 +5,19 @@ Uses `template-repos.yml` from `scverse/ecosystem-packages`.
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import os
 import sys
-from collections.abc import Iterable
 from dataclasses import KW_ONLY, InitVar, dataclass, field
 from glob import glob
 from pathlib import Path
 from subprocess import run
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, ClassVar, TypedDict, cast
+from urllib.parse import quote, urlsplit, urlunsplit
 
-from cyclopts import App
-from furl import furl
 from git.exc import GitCommandError
 from git.repo import Repo
 from git.util import Actor
@@ -29,7 +28,7 @@ from ._log import log, setup_logging
 from .backoff import retry_with_backoff
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Generator, Iterable, Sequence
     from typing import IO, Literal, LiteralString, NotRequired
 
     from github.ContentFile import ContentFile
@@ -72,6 +71,13 @@ IGNORE_COOKIECUTTER_VARS = [
 ]
 
 
+def _url_with_username(url_str: str, username: str) -> str:
+    """Return `url_str` with `username` inserted as URL userinfo."""
+    url = urlsplit(url_str)
+    host = url.netloc.rsplit("@", maxsplit=1)[-1]
+    return urlunsplit((url.scheme, f"{quote(username, safe='')}@{host}", url.path, url.query, url.fragment))
+
+
 @dataclass
 class GitHubConnection:
     """API connection to a GitHub user (e.g. scverse-bot)"""
@@ -97,10 +103,9 @@ class GitHubConnection:
         return self.user.login
 
     def auth(self, url_str: str) -> str:
-        url = furl(url_str)
         if self.token:
-            url.username = self.token
-        return str(url)
+            return _url_with_username(url_str, self.token)
+        return url_str
 
 
 @dataclass
@@ -534,10 +539,6 @@ def make_pr(con: GitHubConnection, release: GHRelease, repo_url: str, *, log_dir
         log.info(f"Created PR #{new_pr.number} with branch name `{new_pr.head.ref}`.")
 
 
-cli = App()
-
-
-@cli.default
 def main(
     tag_name: str,
     repo_urls: Iterable[str] | None = None,
@@ -573,7 +574,7 @@ def main(
     if all_repos:
         repo_urls = get_repo_urls(con.gh)
 
-    if repo_urls is None:
+    if not repo_urls:
         msg = "Need to either specify `--all` or one or more repo URLs."
         raise ValueError(msg)
 
@@ -587,7 +588,51 @@ def main(
             log.error(f"Error while updating {repo_url}")
             log.exception(e)
 
-    sys.exit(failed > 0)
+    if failed > 0:
+        raise SystemExit(1)
+
+
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Make template update PRs to GitHub repositories.")
+    parser.add_argument("tag_name", help="Identifier of the cookiecutter-scverse release.")
+    parser.add_argument(
+        "repo_urls",
+        nargs="*",
+        help="Full GitHub repository URLs to update, for example https://github.com/scverse/scirpy.",
+    )
+    parser.add_argument(
+        "--all",
+        "--all-repos",
+        dest="all_repos",
+        action="store_true",
+        help="Update all repositories listed in scverse/ecosystem-packages template-repos.yml.",
+    )
+    parser.add_argument(
+        "--log-dir",
+        type=Path,
+        default=Path("cruft_logs"),
+        help="Directory to which cruft logs are written.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Skip making pull requests after updating the template branches.",
+    )
+    args = parser.parse_args(argv)
+    if not args.all_repos and not args.repo_urls:
+        parser.error("Need to either specify `--all` or one or more repo URLs.")
+    return args
+
+
+def cli(argv: Sequence[str] | None = None) -> None:
+    args = _parse_args(argv)
+    main(
+        args.tag_name,
+        args.repo_urls,
+        all_repos=args.all_repos,
+        log_dir=args.log_dir,
+        dry_run=args.dry_run,
+    )
 
 
 if __name__ == "__main__":

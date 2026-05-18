@@ -14,6 +14,7 @@ from scverse_template_scripts.cruft_prs import (
     _clone_and_prepare_repo,
     _commit_update,
     _get_cruft_config_from_upstream,
+    _url_with_username,
     get_repo_urls,
     get_template_release,
 )
@@ -84,6 +85,30 @@ def test_get_repo_urls(bot_con: GitHubConnection) -> None:
     """Test if list of repos using template can be obtained from scverse/ecosystem-packages"""
     repo_urls = get_repo_urls(bot_con.gh)
     assert any("scverse/scirpy" in url for url in repo_urls)
+
+
+@pytest.mark.parametrize(
+    ("url", "username", "expected"),
+    [
+        (
+            "https://github.com/scverse/cookiecutter-scverse.git",
+            "ghp_token",
+            "https://ghp_token@github.com/scverse/cookiecutter-scverse.git",
+        ),
+        (
+            "https://old@github.com/scverse/cookiecutter-scverse.git",
+            "ghp_token",
+            "https://ghp_token@github.com/scverse/cookiecutter-scverse.git",
+        ),
+        (
+            "https://github.com:443/scverse/repo.git?depth=1",
+            "ghp_token@x",
+            "https://ghp_token%40x@github.com:443/scverse/repo.git?depth=1",
+        ),
+    ],
+)
+def test_url_with_username(url: str, username: str, expected: str) -> None:
+    assert _url_with_username(url, username) == expected
 
 
 def test_clone_and_prepare_repo(clone: Repo) -> None:
