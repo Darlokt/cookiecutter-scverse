@@ -25,7 +25,7 @@ HERE = Path(__file__).parent
     ],
 )
 def test_build(tmp_path: Path, params: Mapping[str, Any], path: Path | str, pattern: re.Pattern | str | None) -> None:
-    cookiecutter(str(HERE.parent.parent), output_dir=tmp_path, no_input=True, extra_context=params)
+    cookiecutter(str(HERE.parent), output_dir=tmp_path, no_input=True, extra_context=params)
     proj_dir = tmp_path / "project-name"
     assert proj_dir.is_dir()
     path = proj_dir / path

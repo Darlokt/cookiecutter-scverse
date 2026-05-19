@@ -42,7 +42,7 @@ except FileNotFoundError:
 # The following output was generated using rich
 # The formatted output is included here directly, because I don't want
 # rich as another dependency for initializing the repo.
-# Regenerate using `cd scripts; hatch run python -m scverse_template_scripts.make_rich_output`
+# Regenerate using `uv run python -m scverse_template_scripts.make_rich_output`
 print("""
 
 
