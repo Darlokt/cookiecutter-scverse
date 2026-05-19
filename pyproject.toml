@@ -5,7 +5,7 @@ requires = [ "hatch-vcs", "hatchling" ]
 [project]
 name = "scverse-template-scripts"
 description = "scripts for ecosystem package data"
-readme = "../README.md"
+readme = "README.md"
 license = "GPL-3.0"
 authors = [
   { name = "Philipp A.", email = "flying-sheep@web.de" },
@@ -21,7 +21,7 @@ dynamic = [ "version" ]
 dependencies = [
   "cruft",
   "gitpython",
-  "pre-commit",     # is ran by cruft
+  "pre-commit",  # is ran by cruft
   "pygithub>=2",
   "pyyaml",
   "rich",
@@ -89,13 +89,14 @@ lint.isort.required-imports = [ "from __future__ import annotations" ]
 column_width = 120
 
 [tool.pytest]
-addopts = [
+ini_options.addopts = [
   "--import-mode=importlib",
 ]
-filterwarnings = [
+ini_options.filterwarnings = [
   "error",
   # https://github.com/man-group/pytest-plugins/issues/224
   "ignore::DeprecationWarning:pytest_shutil",
   # https://github.com/psf/requests/issues/7219
   "ignore:urllib3.*or chardet.*doesn't match a supported version",
 ]
+ini_options.testpaths = [ "tests" ]

@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import random
 import time
-from collections.abc import Callable
-from typing import TypeVar
+from typing import TYPE_CHECKING
 
 from ._log import log
 
-T = TypeVar("T")
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
-def retry_with_backoff(
+def retry_with_backoff[T](
     fn: Callable[[], T],
     *,
     max_attempts: int = 5,
@@ -50,11 +50,14 @@ def retry_with_backoff(
             fail. Exceptions not matching ``exc_cls`` are raised immediately.
     """
     if max_attempts < 1:
-        raise ValueError("max_attempts must be at least 1")
+        msg = "max_attempts must be at least 1"
+        raise ValueError(msg)
     if base_delay < 0:
-        raise ValueError("base_delay must be non-negative")
+        msg = "base_delay must be non-negative"
+        raise ValueError(msg)
     if max_delay < 0:
-        raise ValueError("max_delay must be non-negative")
+        msg = "max_delay must be non-negative"
+        raise ValueError(msg)
 
     for attempt in range(1, max_attempts + 1):
         try:
@@ -85,4 +88,5 @@ def retry_with_backoff(
             time.sleep(sleep)
 
     # The loop either returns from fn() or raises from the except block.
-    raise RuntimeError("unreachable")
+    msg = "unreachable"
+    raise RuntimeError(msg)
